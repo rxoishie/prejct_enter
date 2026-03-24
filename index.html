@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartIrriPro - Irrigation Intelligente</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ===== RESET & VARIABLES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --primary-dark: #1a252f;
+            --secondary: #27ae60;
+            --secondary-light: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --white: #ffffff;
+            --gray: #95a5a6;
+            --shadow: 0 10px 30px rgba(0,0,0,0.1);
+            --shadow-lg: 0 15px 40px rgba(0,0,0,0.15);
+            --border-radius: 20px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--dark);
+            overflow-x: hidden;
+        }
+
+        /* ===== LOADING SCREEN ===== */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader {
+            text-align: center;
+            color: var(--white);
+        }
+
+        .loader i {
+            font-size: 4rem;
+            animation: float 2s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        .loader h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid var(--white);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes float { 50% { transform: translateY(-15px); } }
+
+        /* ===== NAVIGATION ===== */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            background: var(--secondary);
+            color: var(--white);
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.8rem;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link {
+            color: var(--dark);
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: var(--light);
+        }
+
+        .btn-nav {
+            background: var(--secondary);
+            color: var(--white);
+            padding: 10px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .btn-nav:hover {
+            background: var(--secondary-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 100px 2rem 50px;
+            color: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: rgba(255,255,255,0.05);
+            transform: rotate(45deg);
+            animation: backgroundMove 30s linear infinite;
+        }
+
+        @keyframes backgroundMove {
+            0% { transform: rotate(45deg) translate(-10%, -10%); }
+            100% { transform: rotate(45deg) translate(10%, 10%); }
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-text h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-text h1 span {
+            color: var(--secondary-light);
+            display: block;
+        }
+
+        .hero-text p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--secondary);
+            color: var(--white);
+            padding: 15px 35px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-light);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-outline-light {
+            background: transparent;
+            color: var(--white);
+            padding: 15px 35px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+            border: 2px solid var(--white);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-outline-light:hover {
+            background: var(--white);
+            color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        .hero-image {
+            text-align: center;
+        }
+
+        .hero-image i {
+            font-size: 15rem;
+            color: rgba(255,255,255,0.2);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* ===== CONCEPT SECTION ===== */
+        .concept {
+            padding: 80px 2rem;
+            background: var(--white);
+        }
+
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .section-title p {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .concept-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            text-align: center;
+            border: 1px solid var(--light);
+        }
+
+        .concept-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .concept-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--secondary), var(--info));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .concept-icon i {
+            font-size: 2.5rem;
+            color: var(--white);
+        }
+
+        .concept-card h3 {
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .concept-card p {
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        /* ===== FEATURES SECTION ===== */
+        .features {
+            padding: 80px 2rem;
+            background: var(--light);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-item {
+            display: flex;
+            gap: 1.5rem;
+            background: var(--white);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .feature-item:hover {
+            transform: translateX(10px);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--secondary), var(--info));
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-icon i {
+            font-size: 1.8rem;
+            color: var(--white);
+        }
+
+        .feature-content h3 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-content p {
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        /* ===== HOW IT WORKS ===== */
+        .how-it-works {
+            padding: 80px 2rem;
+            background: var(--white);
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step {
+            text-align: center;
+            position: relative;
+        }
+
+        .step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 40px;
+            right: -30px;
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--secondary), var(--info));
+        }
+
+        .step-number {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--secondary), var(--info));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: var(--white);
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .step h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .step p {
+            color: var(--gray);
+        }
+
+        /* ===== INSTRUCTIONS SECTION ===== */
+        .instructions {
+            padding: 80px 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--white);
+        }
+
+        .instructions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+
+        .instruction-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .instruction-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .instruction-card h3 i {
+            color: var(--secondary-light);
+        }
+
+        .instruction-list {
+            list-style: none;
+        }
+
+        .instruction-list li {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .instruction-list i {
+            color: var(--secondary-light);
+        }
+
+        .instruction-note {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+
+        .btn-instruction {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 12px 30px;
+            background: var(--secondary);
+            color: var(--white);
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .btn-instruction:hover {
+            background: var(--secondary-light);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+        }
+
+        /* ===== CTA SECTION ===== */
+        .cta {
+            padding: 60px 2rem;
+            background: var(--white);
+            text-align: center;
+        }
+
+        .cta h2 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .cta p {
+            color: var(--gray);
+            margin-bottom: 2rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--primary);
+            color: var(--white);
+            padding: 3rem 2rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .footer-col h4 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-col ul li a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer-col ul li a:hover {
+            color: var(--secondary-light);
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 2rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 968px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .concept-grid,
+            .features-grid,
+            .steps,
+            .instructions-grid,
+            .footer-content {
+                grid-template-columns: 1fr;
+            }
+
+            .step:not(:last-child)::after {
+                display: none;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+            
+            .hero-buttons {
+                flex-direction: column;
+            }
+            
+            .feature-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .feature-icon {
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loader">
+            <i class="fas fa-leaf"></i>
+            <h2>SmartIrriPro</h2>
+            <p>Bienvenue sur votre plateforme d'irrigation intelligente</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <span class="brand-icon">
+                <i class="fas fa-leaf"></i>
+            </span>
+            SmartIrriPro
+        </a>
+        
+        <div class="nav-menu">
+            <a href="#concept" class="nav-link">Concept</a>
+            <a href="#features" class="nav-link">Fonctionnalités</a>
+            <a href="#how-it-works" class="nav-link">Comment ça marche</a>
+            <a href="login.html" class="btn-nav">Connexion</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>
+                    L'irrigation intelligente
+                    <span>au service de vos cultures</span>
+                </h1>
+                <p>SmartIrriPro optimise automatiquement l'arrosage de vos plantes en fonction de leurs besoins réels. Économisez l'eau tout en maximisant la croissance.</p>
+                <div class="hero-buttons">
+                    <a href="signup.html" class="btn-primary">
+                        <i class="fas fa-user-plus"></i>
+                        Créer un compte
+                    </a>
+                    <a href="login.html" class="btn-outline-light">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Se connecter
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <i class="fas fa-seedling"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- Concept Section -->
+    <section id="concept" class="concept">
+        <div class="section-container">
+            <div class="section-title">
+                <h2>Notre Concept</h2>
+                <p>Une irrigation précise, économique et écologique</p>
+            </div>
+            
+            <div class="concept-grid">
+                <div class="concept-card">
+                    <div class="concept-icon">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <h3>Technologie intelligente</h3>
+                    <p>Des capteurs mesurent en temps réel l'humidité du sol, la température et d'autres paramètres pour chaque zone de votre jardin.</p>
+                </div>
+                
+                <div class="concept-card">
+                    <div class="concept-icon">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <h3>Arrosage optimisé</h3>
+                    <p>Chaque zone reçoit exactement la quantité d'eau dont elle a besoin, au moment idéal, grâce à des algorithmes intelligents.</p>
+                </div>
+                
+                <div class="concept-card">
+                    <div class="concept-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Suivi en temps réel</h3>
+                    <p>Visualisez l'état de vos cultures depuis n'importe où, consultez l'historique et recevez des alertes en cas de besoin.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="section-container">
+            <div class="section-title">
+                <h2>Fonctionnalités principales</h2>
+                <p>Tout ce dont vous avez besoin pour gérer votre irrigation</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Gestion par zones</h3>
+                        <p>Divisez votre terrain en zones indépendantes avec des besoins spécifiques (potager, pelouse, plantes méditerranéennes...).</p>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Contrôle à distance</h3>
+                        <p>Pilotez votre système d'irrigation depuis votre smartphone, tablette ou ordinateur, où que vous soyez.</p>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Mode automatique</h3>
+                        <p>Laissez le système décider quand et combien arroser selon les seuils que vous avez définis.</p>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Alertes personnalisées</h3>
+                        <p>Soyez notifié en cas d'humidité critique, de panne ou de fin d'arrosage.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="section-container">
+            <div class="section-title">
+                <h2>Comment ça marche ?</h2>
+                <p>3 étapes simples pour commencer</p>
+            </div>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Créez votre compte</h3>
+                    <p>Inscrivez-vous gratuitement en quelques clics. Aucune carte bancaire requise.</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Configurez vos zones</h3>
+                    <p>Définissez vos zones d'irrigation et paramétrez les seuils d'humidité souhaités.</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Installez les capteurs</h3>
+                    <p>Placez les capteurs dans le sol et connectez votre système. Laissez SmartIrriPro faire le reste !</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Instructions Section -->
+    <section class="instructions">
+        <div class="section-container">
+            <div class="section-title">
+                <h2 style="color: var(--white);">Comment accéder à votre espace</h2>
+                <p style="color: rgba(255,255,255,0.8);">Suivez ces instructions simples</p>
+            </div>
+            
+            <div class="instructions-grid">
+                <!-- Nouveaux utilisateurs -->
+                <div class="instruction-card">
+                    <h3>
+                        <i class="fas fa-user-plus"></i>
+                        Nouvel utilisateur
+                    </h3>
+                    <ul class="instruction-list">
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Cliquez sur "Créer un compte" ou le bouton "S'inscrire"
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Remplissez vos informations personnelles (prénom, nom, email)
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Choisissez un nom d'utilisateur et un mot de passe sécurisé
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Sélectionnez vos préférences (langue, notifications)
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Acceptez les conditions d'utilisation
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Validez pour créer votre compte
+                        </li>
+                    </ul>
+                    <div class="instruction-note">
+                        <i class="fas fa-info-circle"></i>
+                        Compte démo : Aishatou / password123
+                    </div>
+                    <a href="signup.html" class="btn-instruction">
+                        <i class="fas fa-user-plus"></i>
+                        Créer un compte
+                    </a>
+                </div>
+                
+                <!-- Utilisateurs existants -->
+                <div class="instruction-card">
+                    <h3>
+                        <i class="fas fa-sign-in-alt"></i>
+                        Utilisateur existant
+                    </h3>
+                    <ul class="instruction-list">
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Cliquez sur "Se connecter" en haut de la page
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Saisissez votre nom d'utilisateur
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Saisissez votre mot de passe
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Cochez "Se souvenir de moi" si vous êtes sur votre appareil personnel
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Cliquez sur "Se connecter"
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Accédez à votre tableau de bord
+                        </li>
+                    </ul>
+                    <div class="instruction-note">
+                        <i class="fas fa-info-circle"></i>
+                        Identifiants de démo : Aishatou / password123
+                    </div>
+                    <a href="login.html" class="btn-instruction">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Se connecter
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="section-container">
+            <h2>Prêt à révolutionner votre irrigation ?</h2>
+            <p>Rejoignez SmartIrriPro dès aujourd'hui et économisez jusqu'à 30% d'eau</p>
+            <div class="cta-buttons">
+                <a href="signup.html" class="btn-primary">
+                    <i class="fas fa-user-plus"></i>
+                    Créer un compte gratuit
+                </a>
+                <a href="login.html" class="btn-outline-light" style="border-color: var(--secondary); color: var(--secondary);">
+                    <i class="fas fa-sign-in-alt"></i>
+                    J'ai déjà un compte
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-col">
+                <h4>SmartIrriPro</h4>
+                <ul>
+                    <li><a href="#concept">Concept</a></li>
+                    <li><a href="#features">Fonctionnalités</a></li>
+                    <li><a href="#how-it-works">Comment ça marche</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-col">
+                <h4>Support</h4>
+                <ul>
+                    <li><a href="#">FAQ</a></li>
+                    <li><a href="#">Guide d'utilisation</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-col">
+                <h4>Légal</h4>
+                <ul>
+                    <li><a href="#">Conditions d'utilisation</a></li>
+                    <li><a href="#">Politique de confidentialité</a></li>
+                    <li><a href="#">Mentions légales</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-col">
+                <h4>Suivez-nous</h4>
+                <ul>
+                    <li><a href="#"><i class="fab fa-facebook"></i> Facebook</a></li>
+                    <li><a href="#"><i class="fab fa-twitter"></i> Twitter</a></li>
+                    <li><a href="#"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2024 SmartIrriPro. Tous droits réservés. | Irrigation Intelligente</p>
+        </div>
+    </footer>
+
+    <script>
+        // Masquer l'écran de chargement
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('fade-out');
+            }, 1500);
+        });
+
+        // Smooth scroll pour les ancres
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

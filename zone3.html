@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartIrriPro - Zone Est</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+   
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* ===== RESET & VARIABLES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --primary-dark: #1a252f;
+            --secondary: #27ae60;
+            --secondary-light: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --white: #ffffff;
+            --gray: #95a5a6;
+            --shadow: 0 10px 30px rgba(0,0,0,0.1);
+            --shadow-lg: 0 15px 40px rgba(0,0,0,0.15);
+            --border-radius: 20px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+        }
+
+        /* ===== LOADING SCREEN ===== */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader {
+            text-align: center;
+            color: var(--white);
+        }
+
+        .loader i {
+            font-size: 4rem;
+            animation: float 2s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        .loader h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid var(--white);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes float { 50% { transform: translateY(-15px); } }
+
+        /* ===== NAVIGATION ===== */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--secondary);
+        }
+
+        .navbar-brand {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            background: var(--secondary);
+            color: var(--white);
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.8rem;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 5px;
+            list-style: none;
+        }
+
+        .navbar-menu a {
+            color: var(--dark);
+            text-decoration: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            transition: var(--transition);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .navbar-menu a:hover,
+        .navbar-menu a.active {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 8px 15px;
+            border-radius: 50px;
+            background: var(--light);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--secondary), var(--info));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .menu-toggle {
+            display: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+
+        /* ===== CONTAINER ===== */
+        .container {
+            max-width: 1200px;
+            margin: 100px auto 40px;
+            padding: 0 30px;
+            animation: fadeIn 0.8s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== BACK BUTTON ===== */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--white);
+            text-decoration: none;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            transition: var(--transition);
+        }
+
+        .back-btn:hover {
+            background: var(--white);
+            color: var(--primary);
+        }
+
+        /* ===== ZONE HEADER ===== */
+        .zone-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            color: var(--white);
+        }
+
+        .zone-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .zone-header h1 i {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 15px;
+        }
+
+        .zone-status {
+            padding: 12px 25px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50px;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: var(--secondary);
+        }
+
+        .status-inactive {
+            background: var(--gray);
+        }
+
+        /* ===== STATS GRID ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--secondary), var(--info));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        /* ===== ALERT ===== */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid var(--warning);
+        }
+
+        /* ===== CONTROL CARD ===== */
+        .control-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 15px;
+        }
+
+        .card-title i {
+            color: var(--secondary);
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .control-item {
+            text-align: center;
+            padding: 20px;
+            background: var(--light);
+            border-radius: 15px;
+        }
+
+        .control-item h3 {
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-success {
+            background: var(--secondary);
+            color: var(--white);
+        }
+
+        .btn-success:hover {
+            background: var(--secondary-light);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            border: 2px solid var(--gray);
+            border-radius: 10px;
+            background: transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .mode-btn.active {
+            background: var(--secondary);
+            border-color: var(--secondary);
+            color: var(--white);
+        }
+
+        /* ===== CHART CARD ===== */
+        .chart-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+
+        .chart-container {
+            height: 300px;
+            width: 100%;
+        }
+
+        /* ===== HISTORY CARD ===== */
+        .history-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .history-list {
+            margin-top: 20px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--light);
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-date {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .history-value {
+            font-weight: 600;
+        }
+
+        .history-success {
+            color: var(--secondary);
+        }
+
+        .history-warning {
+            color: var(--warning);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 968px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar-menu {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: var(--white);
+                padding: 20px;
+                flex-direction: column;
+            }
+            
+            .navbar-menu.show { display: flex; }
+            .menu-toggle { display: block; }
+            
+            .zone-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loader">
+            <i class="fas fa-leaf"></i>
+            <h2>SmartIrriPro</h2>
+            <p>Chargement de la zone Est...</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="../dashboard.html" class="navbar-brand">
+            <span class="brand-icon">
+                <i class="fas fa-leaf"></i>
+            </span>
+            SmartIrriPro
+        </a>
+        
+        <div class="menu-toggle" onclick="toggleMenu()">
+            <i class="fas fa-bars"></i>
+        </div>
+        
+        <ul class="navbar-menu" id="navbarMenu">
+            <li><a href="../dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="../historique.html"><i class="fas fa-history"></i> Historique</a></li>
+            <li><a href="../parametres.html"><i class="fas fa-cog"></i> Paramètres</a></li>
+            <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
+        </ul>
+        
+        <div class="user-menu">
+            <div class="user-avatar">A</div>
+            <span>Aishatou</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Back Button -->
+        <a href="../dashboard.html" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Retour au Dashboard
+        </a>
+
+        <!-- Zone Header -->
+        <div class="zone-header">
+            <h1>
+                <i class="fas fa-mountain"></i>
+                Zone Est
+            </h1>
+            <div class="zone-status status-active">
+                <i class="fas fa-play"></i> Arrosage en cours
+            </div>
+        </div>
+
+        <!-- Alerte humidité critique -->
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Attention :</strong> Humidité critique (20%) - Arrosage recommandé immédiatement
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-tint"></i>
+                </div>
+                <div class="stat-value" id="humidity">20%</div>
+                <div class="stat-label">Humidité</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-thermometer-half"></i>
+                </div>
+                <div class="stat-value" id="temperature">25°C</div>
+                <div class="stat-label">Température</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-water"></i>
+                </div>
+                <div class="stat-value" id="waterUsed">45L</div>
+                <div class="stat-label">Eau utilisée</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-value" id="lastWatered">11:00</div>
+                <div class="stat-label">Dernier arrosage</div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-card">
+            <h3 class="card-title">
+                <i class="fas fa-sliders-h"></i>
+                Contrôle de l'irrigation
+            </h3>
+            
+            <div class="control-grid">
+                <div class="control-item">
+                    <h3>Mode</h3>
+                    <div class="mode-selector">
+                        <button class="mode-btn active" onclick="setMode('auto')">
+                            <i class="fas fa-robot"></i> Auto
+                        </button>
+                        <button class="mode-btn" onclick="setMode('manuel')">
+                            <i class="fas fa-user"></i> Manuel
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="control-item">
+                    <h3>Contrôle manuel</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="startIrrigation()">
+                            <i class="fas fa-play"></i> Démarrer
+                        </button>
+                        <button class="btn btn-danger" onclick="stopIrrigation()">
+                            <i class="fas fa-stop"></i> Arrêter
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="control-item">
+                    <h3>Programmation</h3>
+                    <div>
+                        <input type="time" id="scheduleTime" value="07:30" style="padding: 8px; border-radius: 8px; border: 2px solid var(--light); margin-bottom: 10px; width: 100%;">
+                        <button class="btn btn-primary" onclick="scheduleIrrigation()" style="width: 100%;">
+                            <i class="fas fa-clock"></i> Programmer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-card">
+            <h3 class="card-title">
+                <i class="fas fa-chart-line"></i>
+                Historique humidité - 24h
+            </h3>
+            <div class="chart-container">
+                <canvas id="zoneChart"></canvas>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div class="history-card">
+            <h3 class="card-title">
+                <i class="fas fa-history"></i>
+                Derniers arrosages
+            </h3>
+            
+            <div class="history-list" id="historyList">
+                <div class="history-item">
+                    <span class="history-date">Aujourd'hui 11:00</span>
+                    <span class="history-value history-warning">20L - 7 min</span>
+                </div>
+                <div class="history-item">
+                    <span class="history-date">Hier 16:30</span>
+                    <span class="history-value history-success">25L - 8 min</span>
+                </div>
+                <div class="history-item">
+                    <span class="history-date">Hier 07:30</span>
+                    <span class="history-value history-success">20L - 7 min</span>
+                </div>
+                <div class="history-item">
+                    <span class="history-date">15 Mars 2024</span>
+                    <span class="history-value history-success">30L - 10 min</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Masquer l'écran de chargement
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('fade-out');
+            }, 1000);
+            initChart();
+        });
+
+        // Menu toggle
+        function toggleMenu() {
+            document.getElementById('navbarMenu').classList.toggle('show');
+        }
+
+        // Graphique
+        function initChart() {
+            const ctx = document.getElementById('zoneChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:00'],
+                    datasets: [{
+                        label: 'Humidité Zone Est',
+                        data: [25, 22, 20, 28, 35, 30, 28],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Contrôles
+        function setMode(mode) {
+            const btns = document.querySelectorAll('.mode-btn');
+            btns.forEach(btn => btn.classList.remove('active'));
+            if(mode === 'auto') {
+                btns[0].classList.add('active');
+                alert('Mode automatique activé pour la Zone Est');
+            } else {
+                btns[1].classList.add('active');
+                alert('Mode manuel activé pour la Zone Est');
+            }
+        }
+
+        function startIrrigation() {
+            alert('Arrosage démarré - Zone Est');
+        }
+
+        function stopIrrigation() {
+            alert('Arrosage arrêté - Zone Est');
+        }
+
+        function scheduleIrrigation() {
+            const time = document.getElementById('scheduleTime').value;
+            alert(`Arrosage programmé à ${time} pour la Zone Est`);
+        }
+
+        // Déconnexion
+        function logout() {
+            if(confirm('Voulez-vous vous déconnecter ?')) {
+                window.location.href = '../login.html';
+            }
+        }
+    </script>
+</body>
+</html>
