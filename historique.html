@@ -724,7 +724,7 @@
         <ul class="navbar-menu" id="navbarMenu">
             <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
             <li><a href="historique.html" class="active"><i class="fas fa-history"></i> Historique</a></li>
-            <li><a href="parametres.html"><i class="fas fa-cog"></i> Paramètres</a></li>
+            <li><a href="Parametres.html"><i class="fas fa-cog"></i> Paramètres</a></li>
             <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
         </ul>
         
@@ -924,20 +924,22 @@
         </div>
     </div>
 
+    <script src="frontend-api.js"></script>
     <script>
-        // Données simulées pour l'historique
-        const historyData = [
-            { date: '2024-03-15', time: '10:30', zone: 'Nord', zoneId: 1, duration: 15, water: 25, humidity: 35, status: 'success' },
-            { date: '2024-03-15', time: '09:15', zone: 'Sud', zoneId: 2, duration: 0, water: 0, humidity: 55, status: 'cancelled' },
-            { date: '2024-03-15', time: '08:00', zone: 'Est', zoneId: 3, duration: 20, water: 30, humidity: 20, status: 'success' },
-            { date: '2024-03-14', time: '17:30', zone: 'Nord', zoneId: 1, duration: 12, water: 18, humidity: 40, status: 'success' },
-            { date: '2024-03-14', time: '16:00', zone: 'Sud', zoneId: 2, duration: 8, water: 12, humidity: 50, status: 'success' },
-            { date: '2024-03-14', time: '07:30', zone: 'Est', zoneId: 3, duration: 15, water: 22, humidity: 25, status: 'success' },
-            { date: '2024-03-13', time: '18:00', zone: 'Nord', zoneId: 1, duration: 10, water: 15, humidity: 38, status: 'pending' },
-            { date: '2024-03-13', time: '15:30', zone: 'Sud', zoneId: 2, duration: 0, water: 0, humidity: 52, status: 'cancelled' },
-        ];
+        let historyData = [];
+        let zonesById = {};
 
-        // Charger la timeline
+        function shortZoneName(name) {
+            return String(name || 'Zone').replace('Zone', '').trim() || String(name || 'Zone');
+        }
+
+        function zonePageByName(name) {
+            const normalized = String(name || '').toLowerCase();
+            if (normalized.includes('nord') || normalized.includes('1')) return 'zone1.html';
+            if (normalized.includes('sud') || normalized.includes('2')) return 'zone2.html';
+            return 'zone3.html';
+        }
+
         function loadTimeline() {
             const timeline = document.getElementById('timeline');
             timeline.innerHTML = '';
@@ -957,7 +959,7 @@
                     <div class="timeline-content">
                         <div class="timeline-content-header">
                             <span class="timeline-zone">
-                                <i class="fas fa-map-marker-alt"></i> Zone ${item.zone}
+                                <i class="fas fa-map-marker-alt"></i> ${item.zone}
                             </span>
                             <span class="timeline-status ${statusClass}">${statusText}</span>
                         </div>
@@ -984,21 +986,21 @@
             tbody.innerHTML = '';
 
             historyData.forEach(item => {
-                const zoneClass = item.zone === 'Nord' ? 'zone-badge-nord' :
-                                 item.zone === 'Sud' ? 'zone-badge-sud' : 'zone-badge-est';
+                const zoneClass = item.zone.toLowerCase().includes('nord') ? 'zone-badge-nord' :
+                                 item.zone.toLowerCase().includes('sud') ? 'zone-badge-sud' : 'zone-badge-est';
                 const statusIcon = item.status === 'success' ? '✅' :
                                   item.status === 'cancelled' ? '❌' : '⏳';
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${item.date}<br><small>${item.time}</small></td>
-                    <td><span class="zone-badge-table ${zoneClass}">Zone ${item.zone}</span></td>
+                    <td><span class="zone-badge-table ${zoneClass}">${item.zone}</span></td>
                     <td>${item.duration} min</td>
                     <td><strong>${item.water} L</strong></td>
                     <td>${item.humidity}%</td>
                     <td>${statusIcon} ${item.status}</td>
                     <td>
-                        <button class="export-btn" style="padding: 5px 10px;" onclick="viewDetails(${item.zoneId})">
+                        <button class="export-btn" style="padding: 5px 10px;" onclick="viewDetails('${item.zoneId}')">
                             <i class="fas fa-eye"></i>
                         </button>
                     </td>
@@ -1060,27 +1062,40 @@
         }
 
         function logout() {
-            if(confirm('Voulez-vous vous déconnecter ?')) {
-                window.location.href = 'login.html';
+            if (confirm('Voulez-vous vous déconnecter ?')) {
+                SmartIrriApi.logout().finally(() => {
+                    window.location.href = 'login.html';
+                });
             }
         }
 
-        function applyFilters() {
-            alert('Filtres appliqués !');
+        async function applyFilters() {
+            try {
+                await loadFromApi();
+                SmartIrriApi.notify('Filtres appliqués.', 'success');
+            } catch (error) {
+                SmartIrriApi.notify(`Erreur de filtrage: ${error.message}`, 'error', 4200);
+            }
         }
 
         function resetFilters() {
             document.getElementById('zoneFilter').value = 'all';
             document.getElementById('statusFilter').value = 'all';
-            alert('Filtres réinitialisés !');
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            loadFromApi().then(() => {
+                SmartIrriApi.notify('Filtres réinitialisés.', 'info');
+            }).catch((error) => {
+                SmartIrriApi.notify(`Erreur de réinitialisation: ${error.message}`, 'error', 4200);
+            });
         }
 
         function exportPDF() {
-            alert('Export PDF en cours...');
+            SmartIrriApi.notify('Export PDF en cours...', 'info');
         }
 
         function exportExcel() {
-            alert('Export Excel en cours...');
+            SmartIrriApi.notify('Export Excel en cours...', 'info');
         }
 
         function printHistory() {
@@ -1088,17 +1103,94 @@
         }
 
         function viewDetails(zoneId) {
-            window.location.href = `zones/zone${zoneId}.html`;
+            const zone = zonesById[zoneId];
+            window.location.href = `${zonePageByName(zone ? zone.name : '')}?id=${encodeURIComponent(zoneId)}`;
         }
 
-        // Initialisation
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                document.getElementById('loadingScreen').classList.add('fade-out');
-            }, 1500);
-            
+        function updateStats() {
+            const totalWater = historyData.reduce((sum, item) => sum + Number(item.water || 0), 0);
+            const totalDuration = historyData.reduce((sum, item) => sum + Number(item.duration || 0), 0);
+            const alerts = historyData.filter((item) => item.status !== 'success').length;
+
+            const statCards = document.querySelectorAll('.history-stat-content h3');
+            if (statCards.length >= 4) {
+                statCards[0].textContent = `${Math.round(totalWater)} L`;
+                statCards[1].textContent = `${Math.round(totalDuration)} min`;
+                statCards[2].textContent = String(historyData.length);
+                statCards[3].textContent = String(alerts);
+            }
+        }
+
+        async function loadFromApi() {
+            const zoneFilter = document.getElementById('zoneFilter').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const query = new URLSearchParams();
+            if (zoneFilter !== 'all') query.set('zoneId', zoneFilter);
+            if (startDate) query.set('from', `${startDate}T00:00:00.000Z`);
+            if (endDate) query.set('to', `${endDate}T23:59:59.000Z`);
+            if (statusFilter !== 'all') query.set('status', statusFilter);
+
+            const response = await SmartIrriApi.apiRequest(`/irrigation-events?${query.toString()}`);
+            historyData = response.items.map((item) => {
+                const date = new Date(item.start_time);
+                return {
+                    date: date.toISOString().slice(0, 10),
+                    time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    zone: item.zone_name,
+                    zoneId: item.zone_id,
+                    duration: Number(item.duration_minutes || 0),
+                    water: Number(item.volume_liters || 0),
+                    humidity: 0,
+                    status: item.status
+                };
+            });
+
             loadTimeline();
             loadTable();
+            updateStats();
+        }
+
+        async function loadZonesFilter() {
+            const zones = await SmartIrriApi.apiRequest('/zones');
+            const select = document.getElementById('zoneFilter');
+            select.innerHTML = '<option value="all">Toutes les zones</option>';
+            zonesById = {};
+
+            zones.forEach((zone) => {
+                zonesById[zone.id] = zone;
+                const option = document.createElement('option');
+                option.value = zone.id;
+                option.textContent = zone.name;
+                select.appendChild(option);
+            });
+        }
+
+        window.addEventListener('load', async function() {
+            if (!SmartIrriApi.requireAuthPage()) {
+                return;
+            }
+
+            try {
+                const me = await SmartIrriApi.fetchMe();
+                document.querySelector('.user-avatar').textContent = (me.first_name || me.username || me.email || 'U').charAt(0).toUpperCase();
+                document.querySelector('.user-menu span').textContent = me.first_name || me.username || me.email;
+                await loadZonesFilter();
+                await loadFromApi();
+            } catch (error) {
+                SmartIrriApi.notify(`Erreur de chargement: ${error.message}`, 'error', 4200);
+                SmartIrriApi.logout().finally(() => {
+                    window.location.href = 'login.html';
+                });
+                return;
+            }
+
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('fade-out');
+            }, 900);
+
             initChart();
         });
     </script>

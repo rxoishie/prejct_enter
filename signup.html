@@ -45,18 +45,22 @@
             align-items: center;
             padding: 20px;
             position: relative;
+            overflow-x: hidden;
             overflow-y: auto;
         }
 
         /* ===== ANIMATED BACKGROUND ===== */
         body::before {
             content: '';
-            position: absolute;
-            width: 200%;
-            height: 200%;
+            position: fixed;
+            inset: -60% -60% auto -60%;
+            width: 220%;
+            height: 220%;
             background: rgba(255,255,255,0.05);
             transform: rotate(45deg);
             animation: backgroundMove 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
         }
 
         @keyframes backgroundMove {
@@ -452,6 +456,20 @@
             color: var(--secondary);
         }
 
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn:focus-visible,
+        .input-group input:focus-visible,
+        .input-group select:focus-visible {
+            outline: 3px solid rgba(52, 152, 219, 0.32);
+            outline-offset: 2px;
+        }
+
         /* ===== LOGIN LINK ===== */
         .login-link {
             text-align: center;
@@ -635,7 +653,7 @@
                             <label><i class="fas fa-user"></i> Prénom</label>
                             <div class="input-group">
                                 <i class="fas fa-user input-icon"></i>
-                                <input type="text" id="firstName" placeholder="Votre prénom" required>
+                                <input type="text" id="firstName" placeholder="Votre prénom" autocomplete="given-name" required>
                             </div>
                         </div>
 
@@ -643,7 +661,7 @@
                             <label><i class="fas fa-user"></i> Nom</label>
                             <div class="input-group">
                                 <i class="fas fa-user input-icon"></i>
-                                <input type="text" id="lastName" placeholder="Votre nom" required>
+                                <input type="text" id="lastName" placeholder="Votre nom" autocomplete="family-name" required>
                             </div>
                         </div>
                     </div>
@@ -652,7 +670,7 @@
                         <label><i class="fas fa-envelope"></i> Email</label>
                         <div class="input-group">
                             <i class="fas fa-envelope input-icon"></i>
-                            <input type="email" id="email" placeholder="exemple@email.com" required>
+                            <input type="email" id="email" placeholder="exemple@email.com" autocomplete="email" required>
                         </div>
                     </div>
 
@@ -660,7 +678,7 @@
                         <label><i class="fas fa-phone"></i> Téléphone</label>
                         <div class="input-group">
                             <i class="fas fa-phone input-icon"></i>
-                            <input type="tel" id="phone" placeholder="+212 6 XX XX XX XX">
+                            <input type="tel" id="phone" placeholder="+212 6 XX XX XX XX" autocomplete="tel">
                         </div>
                     </div>
 
@@ -682,7 +700,7 @@
                         <label><i class="fas fa-user-circle"></i> Nom d'utilisateur</label>
                         <div class="input-group">
                             <i class="fas fa-user-circle input-icon"></i>
-                            <input type="text" id="username" placeholder="Choisissez un nom d'utilisateur" required>
+                            <input type="text" id="username" placeholder="Choisissez un nom d'utilisateur" autocomplete="username" required>
                         </div>
                     </div>
 
@@ -690,7 +708,7 @@
                         <label><i class="fas fa-lock"></i> Mot de passe</label>
                         <div class="input-group">
                             <i class="fas fa-lock input-icon"></i>
-                            <input type="password" id="password" placeholder="Créez un mot de passe" required onkeyup="checkPasswordStrength()">
+                            <input type="password" id="password" placeholder="Créez un mot de passe" autocomplete="new-password" required onkeyup="checkPasswordStrength()">
                         </div>
                         <div class="password-strength">
                             <div class="strength-bar">
@@ -704,7 +722,7 @@
                         <label><i class="fas fa-lock"></i> Confirmer le mot de passe</label>
                         <div class="input-group">
                             <i class="fas fa-lock input-icon"></i>
-                            <input type="password" id="confirmPassword" placeholder="Confirmez votre mot de passe" required>
+                            <input type="password" id="confirmPassword" placeholder="Confirmez votre mot de passe" autocomplete="new-password" required>
                         </div>
                         <div class="error-message" id="passwordError">Les mots de passe ne correspondent pas</div>
                     </div>
@@ -773,7 +791,7 @@
                         <button type="button" class="btn btn-outline" onclick="prevSection(2)">
                             <i class="fas fa-arrow-left"></i> Précédent
                         </button>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-success" id="signupSubmitBtn">
                             <i class="fas fa-check"></i> Créer mon compte
                         </button>
                     </div>
@@ -787,6 +805,7 @@
         </div>
     </div>
 
+    <script src="frontend-api.js"></script>
     <script>
         // Masquer l'écran de chargement
         window.addEventListener('load', function() {
@@ -851,7 +870,7 @@
             const email = document.getElementById('email').value;
 
             if (!firstName || !lastName || !email) {
-                alert('Veuillez remplir tous les champs obligatoires');
+                SmartIrriApi.notify('Veuillez remplir tous les champs obligatoires.', 'warning');
                 return false;
             }
             return true;
@@ -862,7 +881,7 @@
             const confirmPassword = document.getElementById('confirmPassword').value;
 
             if (password.length < 6) {
-                alert('Le mot de passe doit contenir au moins 6 caractères');
+                SmartIrriApi.notify('Le mot de passe doit contenir au moins 6 caractères.', 'warning');
                 return false;
             }
 
@@ -910,11 +929,10 @@
             event.preventDefault();
 
             if (!document.getElementById('terms').checked) {
-                alert('Veuillez accepter les conditions d\'utilisation');
+                SmartIrriApi.notify('Veuillez accepter les conditions d\'utilisation.', 'warning');
                 return false;
             }
 
-            // Récupérer toutes les données
             const userData = {
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
@@ -923,23 +941,33 @@
                 username: document.getElementById('username').value,
                 password: document.getElementById('password').value,
                 language: document.getElementById('language').value,
-                notifications: document.getElementById('notifications').value,
-                theme: document.getElementById('theme').value,
-                createdAt: new Date().toISOString()
+                notificationPreference: document.getElementById('notifications').value
             };
 
-            // Sauvegarder dans localStorage (simulation)
-            localStorage.setItem('newUser', JSON.stringify(userData));
-            
-            // Afficher le modal de succès
-            document.getElementById('successModal').classList.add('show');
+            const submitButton = document.getElementById('signupSubmitBtn');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+
+            SmartIrriApi.register(userData)
+                .then(() => {
+                    document.getElementById('successModal').classList.add('show');
+                })
+                .catch((error) => {
+                    SmartIrriApi.notify(`Erreur d'inscription: ${error.message}`, 'error', 4200);
+                })
+                .finally(() => {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '<i class="fas fa-check"></i> Créer mon compte';
+                });
             
             return false;
         }
 
         // Redirection vers login
         function redirectToLogin() {
-            window.location.href = 'login.html';
+            SmartIrriApi.logout().finally(() => {
+                window.location.href = 'login.html';
+            });
         }
     </script>
 </body>

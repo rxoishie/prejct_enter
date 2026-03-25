@@ -483,6 +483,15 @@
             transform: translateY(-2px);
         }
 
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+
+
         .card-footer {
             margin-top: 25px;
             padding-top: 20px;
@@ -520,42 +529,6 @@
             border-radius: 20px;
             font-size: 0.8rem;
             background: var(--secondary);
-            color: var(--white);
-        }
-
-        /* ===== NOTIFICATION ===== */
-        .notification {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: var(--white);
-            border-radius: 12px;
-            padding: 15px 20px;
-            box-shadow: var(--shadow-lg);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transform: translateX(400px);
-            transition: transform 0.5s ease;
-            z-index: 999;
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success {
-            border-left: 4px solid var(--secondary);
-        }
-
-        .notification-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--secondary), var(--info));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             color: var(--white);
         }
 
@@ -709,7 +682,7 @@
                 </div>
 
                 <div class="card-footer">
-                    <button class="btn btn-primary" onclick="saveThresholds()">
+                    <button id="saveThresholdsBtn" class="btn btn-primary" onclick="saveThresholds()">
                         <i class="fas fa-save"></i> Sauvegarder
                     </button>
                 </div>
@@ -778,7 +751,7 @@
                 </div>
 
                 <div class="card-footer">
-                    <button class="btn btn-primary" onclick="saveSchedule()">
+                    <button id="saveScheduleBtn" class="btn btn-primary" onclick="saveSchedule()">
                         <i class="fas fa-save"></i> Enregistrer
                     </button>
                 </div>
@@ -827,7 +800,7 @@
                 </div>
 
                 <div class="card-footer">
-                    <button class="btn btn-primary" onclick="saveNotifications()">
+                    <button id="saveNotificationsBtn" class="btn btn-primary" onclick="saveNotifications()">
                         <i class="fas fa-save"></i> Sauvegarder
                     </button>
                 </div>
@@ -868,7 +841,7 @@
                 </div>
 
                 <div class="card-footer">
-                    <button class="btn btn-primary" onclick="saveProfile()">
+                    <button id="saveProfileBtn" class="btn btn-primary" onclick="saveProfile()">
                         <i class="fas fa-save"></i> Mettre à jour
                     </button>
                     <button class="btn btn-danger" onclick="changePassword()">
@@ -879,78 +852,230 @@
         </div>
     </div>
 
-    <!-- Notification -->
-    <div class="notification success" id="notification">
-        <div class="notification-icon"><i class="fas fa-check"></i></div>
-        <div>
-            <div style="font-weight: 600;">Paramètres sauvegardés</div>
-            <div style="font-size: 0.9rem; color: var(--gray);">Vos modifications ont été enregistrées</div>
-        </div>
-        <div style="cursor: pointer;" onclick="closeNotification()"><i class="fas fa-times"></i></div>
-    </div>
-
+    <script src="frontend-api.js"></script>
     <script>
-        // Masquer l'écran de chargement
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                document.getElementById('loadingScreen').classList.add('fade-out');
-            }, 1000);
-        });
+        let zones = [];
+        let schedules = [];
 
-        // Menu toggle
         function toggleMenu() {
             document.getElementById('navbarMenu').classList.toggle('show');
         }
 
-        // Mettre à jour les valeurs des sliders
+        function setButtonLoading(button, isLoading, loadingText) {
+            if (!button) return;
+
+            if (isLoading) {
+                if (!button.dataset.originalHtml) {
+                    button.dataset.originalHtml = button.innerHTML;
+                }
+                button.disabled = true;
+                button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
+            } else {
+                button.disabled = false;
+                if (button.dataset.originalHtml) {
+                    button.innerHTML = button.dataset.originalHtml;
+                }
+            }
+        }
+
         function updateValue(elementId, value) {
             document.getElementById(elementId).textContent = value + '%';
         }
 
-        // Sauvegarder les seuils
-        function saveThresholds() {
-            showNotification('Seuils d\'humidité sauvegardés');
+        function applyUser(user) {
+            const displayName = user.first_name || user.username || user.email;
+            document.querySelector('.user-avatar').textContent = displayName.charAt(0).toUpperCase();
+            document.querySelector('.user-menu span').textContent = displayName;
+            document.getElementById('userName').value = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            document.getElementById('userEmail').value = user.email || '';
+            document.getElementById('userPhone').value = user.phone || '';
+            document.getElementById('userLang').value = user.language || 'fr';
         }
 
-        // Sauvegarder la programmation
-        function saveSchedule() {
-            showNotification('Programmation sauvegardée');
+        function bindZonesToSliders() {
+            const keys = [
+                ['Nord', 'minNordRange', 'maxNordRange', 'minNord', 'maxNord'],
+                ['Sud', 'minSudRange', 'maxSudRange', 'minSud', 'maxSud'],
+                ['Est', 'minEstRange', 'maxEstRange', 'minEst', 'maxEst']
+            ];
+
+            keys.forEach(([namePart, minRangeId, maxRangeId, minLabelId, maxLabelId]) => {
+                const zone = zones.find((z) => String(z.name).toLowerCase().includes(namePart.toLowerCase())) || zones[0];
+                if (!zone) {
+                    return;
+                }
+
+                const minVal = Math.round(Number(zone.humidity_threshold_min || 30));
+                const maxVal = Math.round(Number(zone.humidity_threshold_max || 70));
+                document.getElementById(minRangeId).value = minVal;
+                document.getElementById(maxRangeId).value = maxVal;
+                document.getElementById(minLabelId).textContent = `${minVal}%`;
+                document.getElementById(maxLabelId).textContent = `${maxVal}%`;
+
+                const schedule = schedules.find((s) => s.zone_id === zone.id);
+                const timeInputId = `time${namePart}`;
+                if (document.getElementById(timeInputId) && schedule && schedule.time_of_day) {
+                    document.getElementById(timeInputId).value = schedule.time_of_day;
+                }
+            });
         }
 
-        // Sauvegarder les notifications
-        function saveNotifications() {
-            showNotification('Préférences de notifications sauvegardées');
-        }
+        async function saveThresholds() {
+            const button = document.getElementById('saveThresholdsBtn');
+            try {
+                setButtonLoading(button, true, 'Enregistrement...');
 
-        // Sauvegarder le profil
-        function saveProfile() {
-            showNotification('Profil mis à jour');
-        }
+                const payloads = [
+                    { name: 'Nord', min: Number(document.getElementById('minNordRange').value), max: Number(document.getElementById('maxNordRange').value) },
+                    { name: 'Sud', min: Number(document.getElementById('minSudRange').value), max: Number(document.getElementById('maxSudRange').value) },
+                    { name: 'Est', min: Number(document.getElementById('minEstRange').value), max: Number(document.getElementById('maxEstRange').value) }
+                ];
 
-        // Changer mot de passe
-        function changePassword() {
-            alert('Fonctionnalité à venir...');
-        }
+                await Promise.all(payloads.map((item) => {
+                    const zone = zones.find((z) => String(z.name).toLowerCase().includes(item.name.toLowerCase()));
+                    if (!zone) return Promise.resolve();
+                    return SmartIrriApi.apiRequest(`/zones/${zone.id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                            humidityThresholdMin: item.min,
+                            humidityThresholdMax: item.max
+                        })
+                    });
+                }));
 
-        // Notification
-        function showNotification(message) {
-            const notification = document.getElementById('notification');
-            notification.classList.add('show');
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-
-        function closeNotification() {
-            document.getElementById('notification').classList.remove('show');
-        }
-
-        // Déconnexion
-        function logout() {
-            if(confirm('Voulez-vous vous déconnecter ?')) {
-                window.location.href = 'login.html';
+                SmartIrriApi.notify('✓ Seuils sauvegardés avec succès', 'success', 2800);
+            } catch (error) {
+                SmartIrriApi.notify(`Impossible de sauvegarder les seuils: ${error.message}`, 'error', 4200);
+            } finally {
+                setButtonLoading(button, false);
             }
         }
+
+        async function saveSchedule() {
+            const button = document.getElementById('saveScheduleBtn');
+            try {
+                setButtonLoading(button, true, 'Enregistrement...');
+
+                const data = [
+                    { name: 'Nord', time: document.getElementById('timeNord').value },
+                    { name: 'Sud', time: document.getElementById('timeSud').value },
+                    { name: 'Est', time: document.getElementById('timeEst').value }
+                ];
+
+                for (const item of data) {
+                    const zone = zones.find((z) => String(z.name).toLowerCase().includes(item.name.toLowerCase()));
+                    if (!zone) continue;
+
+                    const existing = schedules.find((s) => s.zone_id === zone.id);
+                    if (existing) {
+                        await SmartIrriApi.apiRequest(`/schedules/${existing.id}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ timeOfDay: item.time, recurrence: 'daily', active: true })
+                        });
+                    } else {
+                        await SmartIrriApi.apiRequest('/schedules', {
+                            method: 'POST',
+                            body: JSON.stringify({ zoneId: zone.id, timeOfDay: item.time, recurrence: 'daily', active: true })
+                        });
+                    }
+                }
+
+                schedules = await SmartIrriApi.apiRequest('/schedules');
+                SmartIrriApi.notify('✓ Programmation sauvegardée avec succès', 'success', 2800);
+            } catch (error) {
+                SmartIrriApi.notify(`Impossible de sauvegarder la programmation: ${error.message}`, 'error', 4200);
+            } finally {
+                setButtonLoading(button, false);
+            }
+        }
+
+        async function saveNotifications() {
+            const button = document.getElementById('saveNotificationsBtn');
+            try {
+                setButtonLoading(button, true, 'Enregistrement...');
+
+                const preference = document.getElementById('alertLow').checked ? 'all' : 'important';
+                await SmartIrriApi.apiRequest('/auth/profile', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ notificationPreference: preference })
+                });
+                SmartIrriApi.notify('✓ Notifications mises à jour', 'success', 2800);
+            } catch (error) {
+                SmartIrriApi.notify(`Impossible de sauvegarder les notifications: ${error.message}`, 'error', 4200);
+            } finally {
+                setButtonLoading(button, false);
+            }
+        }
+
+        async function saveProfile() {
+            const button = document.getElementById('saveProfileBtn');
+            try {
+                setButtonLoading(button, true, 'Enregistrement...');
+
+                const fullName = document.getElementById('userName').value.trim().split(/\s+/);
+                const firstName = fullName.shift() || 'Utilisateur';
+                const lastName = fullName.join(' ') || 'SmartIrri';
+
+                const updated = await SmartIrriApi.apiRequest('/auth/profile', {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        firstName,
+                        lastName,
+                        phone: document.getElementById('userPhone').value.trim() || null,
+                        language: document.getElementById('userLang').value
+                    })
+                });
+
+                SmartIrriApi.saveSession({ user: updated });
+                applyUser(updated);
+                SmartIrriApi.notify('✓ Profil mis à jour avec succès', 'success', 2800);
+            } catch (error) {
+                SmartIrriApi.notify(`Impossible de mettre à jour le profil: ${error.message}`, 'error', 4200);
+            } finally {
+                setButtonLoading(button, false);
+            }
+        }
+
+        function changePassword() {
+            SmartIrriApi.notify('La rotation de mot de passe API arrive dans la prochaine étape backend.', 'info', 4200);
+        }
+
+        function logout() {
+            if (confirm('Voulez-vous vous déconnecter ?')) {
+                SmartIrriApi.logout().finally(() => {
+                    window.location.href = 'login.html';
+                });
+            }
+        }
+
+        window.addEventListener('load', async function () {
+            if (!SmartIrriApi.requireAuthPage()) {
+                return;
+            }
+
+            try {
+                const [user, zoneList, scheduleList] = await Promise.all([
+                    SmartIrriApi.fetchMe(),
+                    SmartIrriApi.apiRequest('/zones'),
+                    SmartIrriApi.apiRequest('/schedules').catch(() => [])
+                ]);
+                zones = zoneList;
+                schedules = scheduleList;
+
+                applyUser(user);
+                bindZonesToSliders();
+            } catch (error) {
+                SmartIrriApi.notify(`Erreur de chargement: ${error.message}`, 'error', 4200);
+                SmartIrriApi.logout().finally(() => {
+                    window.location.href = 'login.html';
+                });
+                return;
+            }
+
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('fade-out');
+            }, 800);
+        });
     </script>
 </body>
 </html>

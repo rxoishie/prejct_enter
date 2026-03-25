@@ -640,7 +640,7 @@
         <ul class="navbar-menu" id="navbarMenu">
             <li><a href="dashboard.html" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
             <li><a href="historique.html"><i class="fas fa-history"></i> Historique</a></li>
-            <li><a href="parametres.html"><i class="fas fa-cog"></i> Paramètres</a></li>
+            <li><a href="Parametres.html"><i class="fas fa-cog"></i> Paramètres</a></li>
             <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
         </ul>
         
@@ -733,93 +733,48 @@
         <div style="cursor: pointer;" onclick="closeNotification()"><i class="fas fa-times"></i></div>
     </div>
 
+    <script src="frontend-api.js"></script>
     <script>
-        // Données des zones
-        const zones = [
-            { id: 1, name: 'Zone Nord', icon: '❄️', humidity: 35, temperature: 26, valve: true, mode: 'auto', waterUsed: 125, lastWatered: '10:30' },
-            { id: 2, name: 'Zone Sud', icon: '☀️', humidity: 55, temperature: 27, valve: false, mode: 'manuel', waterUsed: 75, lastWatered: '09:15' },
-            { id: 3, name: 'Zone Est', icon: '🌅', humidity: 20, temperature: 25, valve: true, mode: 'auto', waterUsed: 45, lastWatered: '11:00' }
-        ];
+        let humidityChartInstance = null;
+        let zoneRows = [];
 
-        // Charger les zones
-        function loadZones() {
-            const grid = document.getElementById('zonesGrid');
-            grid.innerHTML = '';
-
-            zones.forEach(zone => {
-                const card = document.createElement('div');
-                card.className = 'zone-card';
-                card.onclick = () => window.location.href = `zones/zone${zone.id}.html`;
-                
-                card.innerHTML = `
-                    <div class="zone-header">
-                        <span class="zone-name"><span class="zone-icon">${zone.icon}</span> ${zone.name}</span>
-                        <span class="zone-badge ${zone.valve ? 'badge-active' : 'badge-inactive'}">
-                            <i class="fas ${zone.valve ? 'fa-play' : 'fa-pause'}"></i>
-                            ${zone.valve ? 'Arrosage' : 'Repos'}
-                        </span>
-                    </div>
-                    
-                    <div class="zone-stats">
-                        <div class="zone-stat-item"><div class="zone-stat-value">${zone.temperature}°C</div><div class="zone-stat-label">TEMP</div></div>
-                        <div class="zone-stat-item"><div class="zone-stat-value">${zone.waterUsed}L</div><div class="zone-stat-label">EAU</div></div>
-                        <div class="zone-stat-item"><div class="zone-stat-value">${zone.lastWatered}</div><div class="zone-stat-label">DERNIER</div></div>
-                    </div>
-                    
-                    <div class="progress-container">
-                        <div class="progress-header">
-                            <span><i class="fas fa-tint" style="color: var(--info);"></i> Humidité</span>
-                            <span style="font-weight: 600;">${zone.humidity}%</span>
-                        </div>
-                        <div class="progress-bar-bg">
-                            <div class="progress-fill" style="width: ${zone.humidity}%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="zone-footer">
-                        <span class="zone-mode"><i class="fas ${zone.mode === 'auto' ? 'fa-robot' : 'fa-user'}"></i> Mode ${zone.mode === 'auto' ? 'Automatique' : 'Manuel'}</span>
-                        ${zone.humidity < 30 ? '<span class="alert-warning"><i class="fas fa-exclamation-triangle"></i> Critique</span>' : ''}
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
+        function formatValue(value, suffix) {
+            if (value === null || value === undefined || Number.isNaN(Number(value))) {
+                return `--${suffix || ''}`;
+            }
+            return `${Math.round(Number(value))}${suffix || ''}`;
         }
 
-        // Initialiser le graphique
-        function initChart() {
+        function zonePageByIndex(index) {
+            if (index === 0) return 'zone1.html';
+            if (index === 1) return 'zone2.html';
+            return 'zone3.html';
+        }
+
+        function buildChart(zones) {
             const ctx = document.getElementById('humidityChart').getContext('2d');
-            new Chart(ctx, {
+            const labels = ['H-6', 'H-5', 'H-4', 'H-3', 'H-2', 'H-1', 'Maintenant'];
+            const colors = ['#3498db', '#27ae60', '#e74c3c'];
+
+            const datasets = zones.slice(0, 3).map((zone, index) => {
+                const value = Number(zone.humidity || 0);
+                return {
+                    label: zone.name,
+                    data: [value, value, value, value, value, value, value],
+                    borderColor: colors[index],
+                    backgroundColor: `${colors[index]}20`,
+                    tension: 0.4,
+                    fill: true
+                };
+            });
+
+            if (humidityChartInstance) {
+                humidityChartInstance.destroy();
+            }
+
+            humidityChartInstance = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:00'],
-                    datasets: [
-                        {
-                            label: 'Zone Nord',
-                            data: [30, 28, 35, 32, 40, 38, 35],
-                            borderColor: '#3498db',
-                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Zone Sud',
-                            data: [45, 42, 48, 52, 55, 50, 48],
-                            borderColor: '#27ae60',
-                            backgroundColor: 'rgba(39, 174, 96, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Zone Est',
-                            data: [25, 22, 20, 28, 35, 30, 28],
-                            borderColor: '#e74c3c',
-                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }
-                    ]
-                },
+                data: { labels, datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -830,43 +785,143 @@
             });
         }
 
-        // Masquer l'écran de chargement
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                document.getElementById('loadingScreen').classList.add('fade-out');
-            }, 1500);
-            
-            loadZones();
-            initChart();
-            setTimeout(showNotification, 2000);
-        });
+        function renderZones(zones) {
+            const grid = document.getElementById('zonesGrid');
+            grid.innerHTML = '';
 
-        // Menu toggle
+            zones.forEach((zone, index) => {
+                const humidity = Number(zone.humidity || 0);
+                const temperature = Number(zone.temperature || 0);
+                const valve = Boolean(zone.valve_status);
+                const zoneLink = `${zonePageByIndex(index)}?id=${encodeURIComponent(zone.id)}`;
+
+                const card = document.createElement('div');
+                card.className = 'zone-card';
+                card.onclick = () => {
+                    window.location.href = zoneLink;
+                };
+
+                card.innerHTML = `
+                    <div class="zone-header">
+                        <span class="zone-name"><span class="zone-icon">${index === 0 ? '❄️' : index === 1 ? '☀️' : '🌅'}</span> ${zone.name}</span>
+                        <span class="zone-badge ${valve ? 'badge-active' : 'badge-inactive'}">
+                            <i class="fas ${valve ? 'fa-play' : 'fa-pause'}"></i>
+                            ${valve ? 'Arrosage' : 'Repos'}
+                        </span>
+                    </div>
+
+                    <div class="zone-stats">
+                        <div class="zone-stat-item"><div class="zone-stat-value">${formatValue(temperature, '°C')}</div><div class="zone-stat-label">TEMP</div></div>
+                        <div class="zone-stat-item"><div class="zone-stat-value">--</div><div class="zone-stat-label">EAU</div></div>
+                        <div class="zone-stat-item"><div class="zone-stat-value">${zone.last_recorded_at ? new Date(zone.last_recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</div><div class="zone-stat-label">DERNIER</div></div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-header">
+                            <span><i class="fas fa-tint" style="color: var(--info);"></i> Humidité</span>
+                            <span style="font-weight: 600;">${formatValue(humidity, '%')}</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-fill" style="width: ${Math.max(0, Math.min(100, humidity))}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="zone-footer">
+                        <span class="zone-mode"><i class="fas ${zone.mode === 'auto' ? 'fa-robot' : 'fa-user'}"></i> Mode ${zone.mode === 'auto' ? 'Automatique' : 'Manuel'}</span>
+                        ${humidity < Number(zone.humidity_threshold_min || 30) ? '<span class="alert-warning"><i class="fas fa-exclamation-triangle"></i> Critique</span>' : ''}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        async function loadDashboard() {
+            const [summary, zones, schedules] = await Promise.all([
+                SmartIrriApi.apiRequest('/dashboard/summary'),
+                SmartIrriApi.apiRequest('/zones'),
+                SmartIrriApi.apiRequest('/schedules').catch(() => [])
+            ]);
+
+            zoneRows = zones;
+
+            document.getElementById('activeZones').textContent = summary.activeZones;
+            document.getElementById('alerts').textContent = summary.activeAlerts;
+            document.getElementById('totalWater').textContent = `${Math.round(summary.waterUsedLast7Days || 0)} L`;
+
+            if (Array.isArray(schedules) && schedules.length > 0) {
+                const sorted = schedules
+                    .filter((s) => s.next_run_time)
+                    .sort((a, b) => new Date(a.next_run_time) - new Date(b.next_run_time));
+                if (sorted[0]) {
+                    const next = new Date(sorted[0].next_run_time);
+                    document.getElementById('nextIrrigation').textContent = next.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            }
+
+            renderZones(zones);
+            buildChart(zones);
+        }
+
+        function applyUserToNavbar(user) {
+            const displayName = user && (user.first_name || user.username || user.email) ? (user.first_name || user.username || user.email) : 'Utilisateur';
+            const avatarLetter = displayName.charAt(0).toUpperCase();
+            document.querySelector('.user-avatar').textContent = avatarLetter;
+            document.querySelector('.user-menu span').textContent = displayName;
+        }
+
         function toggleMenu() {
             document.getElementById('navbarMenu').classList.toggle('show');
         }
 
-        // Notification
-        function showNotification() {
-            document.getElementById('notification').classList.add('show');
-            setTimeout(closeNotification, 5000);
+        function showNotification(text) {
+            const notification = document.getElementById('notification');
+            if (text) {
+                notification.querySelector('div div').textContent = text;
+            }
+            notification.classList.add('show');
+            setTimeout(closeNotification, 4000);
         }
 
         function closeNotification() {
             document.getElementById('notification').classList.remove('show');
         }
 
-        // Logout
         function logout() {
-            if(confirm('Voulez-vous vraiment vous déconnecter ?')) {
-                window.location.href = 'login.html';
+            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+                SmartIrriApi.logout().finally(() => {
+                    window.location.href = 'login.html';
+                });
             }
         }
 
-        // Rafraîchir les données toutes les 30 secondes
-        setInterval(() => {
-            loadZones();
-            showNotification();
+        window.addEventListener('load', async function () {
+            if (!SmartIrriApi.requireAuthPage()) {
+                return;
+            }
+
+            try {
+                const user = await SmartIrriApi.fetchMe();
+                applyUserToNavbar(user);
+                await loadDashboard();
+            } catch (error) {
+                SmartIrriApi.notify(`Erreur de chargement: ${error.message}`, 'error', 4200);
+                SmartIrriApi.logout().finally(() => {
+                    window.location.href = 'login.html';
+                });
+                return;
+            }
+
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('fade-out');
+            }, 800);
+        });
+
+        setInterval(async () => {
+            try {
+                await loadDashboard();
+            } catch (error) {
+            }
         }, 30000);
     </script>
 </body>

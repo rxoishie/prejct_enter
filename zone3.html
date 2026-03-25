@@ -406,6 +406,13 @@
             transform: translateY(-2px);
         }
 
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .mode-selector {
             display: flex;
             gap: 10px;
@@ -426,6 +433,11 @@
             background: var(--secondary);
             border-color: var(--secondary);
             color: var(--white);
+        }
+
+        .mode-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
         }
 
         /* ===== CHART CARD ===== */
@@ -529,7 +541,7 @@
 
     <!-- Navigation -->
     <nav class="navbar">
-        <a href="../dashboard.html" class="navbar-brand">
+        <a href="dashboard.html" class="navbar-brand">
             <span class="brand-icon">
                 <i class="fas fa-leaf"></i>
             </span>
@@ -541,9 +553,9 @@
         </div>
         
         <ul class="navbar-menu" id="navbarMenu">
-            <li><a href="../dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
-            <li><a href="../historique.html"><i class="fas fa-history"></i> Historique</a></li>
-            <li><a href="../parametres.html"><i class="fas fa-cog"></i> Paramètres</a></li>
+            <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="historique.html"><i class="fas fa-history"></i> Historique</a></li>
+            <li><a href="Parametres.html"><i class="fas fa-cog"></i> Paramètres</a></li>
             <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
         </ul>
         
@@ -556,7 +568,7 @@
 
     <div class="container">
         <!-- Back Button -->
-        <a href="../dashboard.html" class="back-btn">
+        <a href="dashboard.html" class="back-btn">
             <i class="fas fa-arrow-left"></i>
             Retour au Dashboard
         </a>
@@ -624,10 +636,10 @@
                 <div class="control-item">
                     <h3>Mode</h3>
                     <div class="mode-selector">
-                        <button class="mode-btn active" onclick="setMode('auto')">
+                        <button id="modeAutoBtn" class="mode-btn active" onclick="setMode('auto')">
                             <i class="fas fa-robot"></i> Auto
                         </button>
-                        <button class="mode-btn" onclick="setMode('manuel')">
+                        <button id="modeManualBtn" class="mode-btn" onclick="setMode('manuel')">
                             <i class="fas fa-user"></i> Manuel
                         </button>
                     </div>
@@ -636,10 +648,10 @@
                 <div class="control-item">
                     <h3>Contrôle manuel</h3>
                     <div class="btn-group">
-                        <button class="btn btn-success" onclick="startIrrigation()">
+                        <button id="startIrrigationBtn" class="btn btn-success" onclick="startIrrigation()">
                             <i class="fas fa-play"></i> Démarrer
                         </button>
-                        <button class="btn btn-danger" onclick="stopIrrigation()">
+                        <button id="stopIrrigationBtn" class="btn btn-danger" onclick="stopIrrigation()">
                             <i class="fas fa-stop"></i> Arrêter
                         </button>
                     </div>
@@ -649,7 +661,7 @@
                     <h3>Programmation</h3>
                     <div>
                         <input type="time" id="scheduleTime" value="07:30" style="padding: 8px; border-radius: 8px; border: 2px solid var(--light); margin-bottom: 10px; width: 100%;">
-                        <button class="btn btn-primary" onclick="scheduleIrrigation()" style="width: 100%;">
+                        <button id="scheduleIrrigationBtn" class="btn btn-primary" onclick="scheduleIrrigation()" style="width: 100%;">
                             <i class="fas fa-clock"></i> Programmer
                         </button>
                     </div>
@@ -696,75 +708,235 @@
         </div>
     </div>
 
+    <script src="frontend-api.js"></script>
     <script>
-        // Masquer l'écran de chargement
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                document.getElementById('loadingScreen').classList.add('fade-out');
-            }, 1000);
-            initChart();
-        });
+        const fallbackZoneIndex = 2;
+        let currentZoneId = null;
+        let currentScheduleId = null;
+        let zoneChart = null;
 
-        // Menu toggle
         function toggleMenu() {
             document.getElementById('navbarMenu').classList.toggle('show');
         }
 
-        // Graphique
-        function initChart() {
+        function setButtonLoading(button, isLoading, loadingText) {
+            if (!button) return;
+
+            if (isLoading) {
+                if (!button.dataset.originalHtml) {
+                    button.dataset.originalHtml = button.innerHTML;
+                }
+                button.disabled = true;
+                button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
+            } else {
+                button.disabled = false;
+                if (button.dataset.originalHtml) {
+                    button.innerHTML = button.dataset.originalHtml;
+                }
+            }
+        }
+
+        function pickZoneIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id') || null;
+        }
+
+        async function resolveZoneId() {
+            const urlId = pickZoneIdFromUrl();
+            if (urlId) return urlId;
+            const zones = await SmartIrriApi.apiRequest('/zones');
+            if (!zones[fallbackZoneIndex]) throw new Error('Aucune zone disponible');
+            return zones[fallbackZoneIndex].id;
+        }
+
+        function renderChart(latestReadings, zoneName) {
             const ctx = document.getElementById('zoneChart').getContext('2d');
-            new Chart(ctx, {
+            const sorted = [...latestReadings].reverse();
+            const labels = sorted.map((r) => new Date(r.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            const values = sorted.map((r) => Number(r.humidity || 0));
+
+            if (zoneChart) zoneChart.destroy();
+            zoneChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:00'],
+                    labels,
                     datasets: [{
-                        label: 'Humidité Zone Est',
-                        data: [25, 22, 20, 28, 35, 30, 28],
+                        label: `Humidité ${zoneName}`,
+                        data: values,
                         borderColor: '#e74c3c',
                         backgroundColor: 'rgba(231, 76, 60, 0.1)',
                         tension: 0.4,
                         fill: true
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-        // Contrôles
-        function setMode(mode) {
-            const btns = document.querySelectorAll('.mode-btn');
-            btns.forEach(btn => btn.classList.remove('active'));
-            if(mode === 'auto') {
-                btns[0].classList.add('active');
-                alert('Mode automatique activé pour la Zone Est');
+        async function loadZoneData() {
+            const [zone, history, schedules, me] = await Promise.all([
+                SmartIrriApi.apiRequest(`/zones/${currentZoneId}`),
+                SmartIrriApi.apiRequest(`/irrigation-events?zoneId=${encodeURIComponent(currentZoneId)}&limit=10`),
+                SmartIrriApi.apiRequest('/schedules').catch(() => []),
+                SmartIrriApi.fetchMe()
+            ]);
+
+            document.querySelector('.user-avatar').textContent = (me.first_name || me.username || me.email || 'U').charAt(0).toUpperCase();
+            document.querySelector('.user-menu span').textContent = me.first_name || me.username || me.email;
+            document.querySelector('.zone-header h1').innerHTML = `<i class="fas fa-mountain"></i> ${zone.name}`;
+            document.getElementById('humidity').textContent = `${Math.round(Number(zone.latestReadings[0]?.humidity || 0))}%`;
+            document.getElementById('temperature').textContent = `${Math.round(Number(zone.latestReadings[0]?.temperature || 0))}°C`;
+            document.getElementById('waterUsed').textContent = `${Math.round(Number(history.items?.[0]?.volume_liters || 0))}L`;
+            document.getElementById('lastWatered').textContent = history.items?.[0]?.start_time ? new Date(history.items[0].start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
+
+            const running = history.items?.find((item) => item.status === 'running');
+            const statusEl = document.querySelector('.zone-status');
+            statusEl.classList.toggle('status-active', Boolean(running));
+            statusEl.classList.toggle('status-inactive', !running);
+            statusEl.innerHTML = running ? '<i class="fas fa-play"></i> Arrosage en cours' : '<i class="fas fa-pause"></i> Repos';
+
+            document.querySelectorAll('.mode-btn').forEach((btn) => btn.classList.remove('active'));
+            if (zone.mode === 'auto') {
+                document.querySelectorAll('.mode-btn')[0].classList.add('active');
             } else {
-                btns[1].classList.add('active');
-                alert('Mode manuel activé pour la Zone Est');
+                document.querySelectorAll('.mode-btn')[1].classList.add('active');
+            }
+
+            const schedule = schedules.find((s) => s.zone_id === currentZoneId);
+            currentScheduleId = schedule ? schedule.id : null;
+            if (schedule && schedule.time_of_day) {
+                document.getElementById('scheduleTime').value = schedule.time_of_day;
+            }
+
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            (history.items || []).slice(0, 4).forEach((item) => {
+                const line = document.createElement('div');
+                line.className = 'history-item';
+                const date = new Date(item.start_time);
+                line.innerHTML = `
+                    <span class="history-date">${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span class="history-value history-success">${Math.round(Number(item.volume_liters || 0))}L - ${Math.round(Number(item.duration_minutes || 0))} min</span>
+                `;
+                historyList.appendChild(line);
+            });
+
+            renderChart(zone.latestReadings || [], zone.name);
+        }
+
+        async function setMode(mode) {
+            const autoBtn = document.getElementById('modeAutoBtn');
+            const manualBtn = document.getElementById('modeManualBtn');
+            const targetBtn = mode === 'auto' ? autoBtn : manualBtn;
+
+            try {
+                setButtonLoading(targetBtn, true, 'Activation...');
+                if (autoBtn) autoBtn.disabled = true;
+                if (manualBtn) manualBtn.disabled = true;
+
+                const apiMode = mode === 'manuel' ? 'manual' : mode;
+                await SmartIrriApi.apiRequest(`/zones/${currentZoneId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ mode: apiMode })
+                });
+                await loadZoneData();
+                SmartIrriApi.notify(`Mode ${mode === 'auto' ? 'automatique' : 'manuel'} activé.`, 'success');
+            } catch (error) {
+                SmartIrriApi.notify(`Impossible de changer le mode: ${error.message}`, 'error', 4200);
+            } finally {
+                setButtonLoading(targetBtn, false);
+                if (autoBtn) autoBtn.disabled = false;
+                if (manualBtn) manualBtn.disabled = false;
             }
         }
 
-        function startIrrigation() {
-            alert('Arrosage démarré - Zone Est');
+        async function startIrrigation() {
+            const button = document.getElementById('startIrrigationBtn');
+            try {
+                setButtonLoading(button, true, 'Démarrage...');
+                await SmartIrriApi.apiRequest(`/zones/${currentZoneId}/start`, {
+                    method: 'POST',
+                    body: JSON.stringify({ triggeredBy: 'manual' })
+                });
+                await loadZoneData();
+                SmartIrriApi.notify('Arrosage démarré.', 'success');
+            } catch (error) {
+                SmartIrriApi.notify(`Impossible de démarrer l'arrosage: ${error.message}`, 'error', 4200);
+            } finally {
+                setButtonLoading(button, false);
+            }
         }
 
-        function stopIrrigation() {
-            alert('Arrosage arrêté - Zone Est');
+        async function stopIrrigation() {
+            const button = document.getElementById('stopIrrigationBtn');
+            try {
+                setButtonLoading(button, true, 'Arrêt...');
+                await SmartIrriApi.apiRequest(`/zones/${currentZoneId}/stop`, {
+                    method: 'POST',
+                    body: JSON.stringify({ status: 'success' })
+                });
+                await loadZoneData();
+                SmartIrriApi.notify('Arrosage arrêté.', 'success');
+            } catch (error) {
+                SmartIrriApi.notify(`Impossible d'arrêter l'arrosage: ${error.message}`, 'error', 4200);
+            } finally {
+                setButtonLoading(button, false);
+            }
         }
 
-        function scheduleIrrigation() {
-            const time = document.getElementById('scheduleTime').value;
-            alert(`Arrosage programmé à ${time} pour la Zone Est`);
+        async function scheduleIrrigation() {
+            const button = document.getElementById('scheduleIrrigationBtn');
+            try {
+                setButtonLoading(button, true, 'Enregistrement...');
+                const time = document.getElementById('scheduleTime').value;
+                if (currentScheduleId) {
+                    await SmartIrriApi.apiRequest(`/schedules/${currentScheduleId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ timeOfDay: time, recurrence: 'daily', active: true })
+                    });
+                } else {
+                    const created = await SmartIrriApi.apiRequest('/schedules', {
+                        method: 'POST',
+                        body: JSON.stringify({ zoneId: currentZoneId, timeOfDay: time, recurrence: 'daily', active: true })
+                    });
+                    currentScheduleId = created.id;
+                }
+                SmartIrriApi.notify(`Arrosage programmé à ${time}.`, 'success');
+            } catch (error) {
+                SmartIrriApi.notify(`Impossible d'enregistrer la programmation: ${error.message}`, 'error', 4200);
+            } finally {
+                setButtonLoading(button, false);
+            }
         }
 
-        // Déconnexion
         function logout() {
-            if(confirm('Voulez-vous vous déconnecter ?')) {
-                window.location.href = '../login.html';
+            if (confirm('Voulez-vous vous déconnecter ?')) {
+                SmartIrriApi.logout().finally(() => {
+                    window.location.href = 'login.html';
+                });
             }
         }
+
+        window.addEventListener('load', async function () {
+            if (!SmartIrriApi.requireAuthPage()) {
+                return;
+            }
+
+            try {
+                currentZoneId = await resolveZoneId();
+                await loadZoneData();
+            } catch (error) {
+                SmartIrriApi.notify(`Erreur de chargement: ${error.message}`, 'error', 4200);
+                SmartIrriApi.logout().finally(() => {
+                    window.location.href = 'login.html';
+                });
+                return;
+            }
+
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('fade-out');
+            }, 800);
+        });
     </script>
 </body>
 </html>
