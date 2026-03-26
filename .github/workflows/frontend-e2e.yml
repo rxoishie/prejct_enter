@@ -1,0 +1,82 @@
+name: Frontend E2E
+
+on:
+  push:
+    paths:
+      - "*.html"
+      - "*.css"
+      - "*.js"
+      - "e2e/**"
+      - "scripts/test-frontend-e2e.sh"
+      - "playwright.config.js"
+      - "package.json"
+      - "package-lock.json"
+      - "backend/**"
+      - ".github/workflows/frontend-e2e.yml"
+  pull_request:
+    paths:
+      - "*.html"
+      - "*.css"
+      - "*.js"
+      - "e2e/**"
+      - "scripts/test-frontend-e2e.sh"
+      - "playwright.config.js"
+      - "package.json"
+      - "package-lock.json"
+      - "backend/**"
+      - ".github/workflows/frontend-e2e.yml"
+  workflow_dispatch:
+
+jobs:
+  frontend-e2e:
+    name: Frontend E2E (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: core
+            playwright_args: "e2e/auth.spec.js e2e/settings.spec.js e2e/navigation.spec.js"
+          - group: operations
+            playwright_args: "e2e/zone-operations.spec.js e2e/history.spec.js"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Ensure frontend e2e script is executable
+        run: chmod +x scripts/test-frontend-e2e.sh
+
+      - name: Run frontend e2e suite
+        env:
+          PLAYWRIGHT_ARGS: ${{ matrix.playwright_args }}
+          E2E_DB_CONTAINER: smartirri-e2e-db-${{ matrix.group }}
+        run: npm run test:e2e:ci
+
+      - name: Upload Playwright report artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-${{ matrix.group }}
+          path: |
+            test-results
+            playwright-report
+            backend-e2e.log
+            frontend-e2e.log
+          if-no-files-found: ignore

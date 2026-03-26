@@ -139,6 +139,35 @@
     banner.textContent = message;
   }
 
+  function bannerMessageByStatus(statusCode) {
+    if (statusCode === 400) {
+      return "API: requete invalide";
+    }
+    if (statusCode === 401) {
+      return "API: session expiree";
+    }
+    if (statusCode === 403) {
+      return "API: acces refuse";
+    }
+    if (statusCode === 404) {
+      return "API: ressource introuvable";
+    }
+    if (statusCode === 409) {
+      return "API: conflit de donnees";
+    }
+    if (statusCode === 422) {
+      return "API: donnees invalides";
+    }
+    if (statusCode === 429) {
+      return "API: trop de tentatives";
+    }
+    if (statusCode >= 500) {
+      return "API: serveur indisponible";
+    }
+
+    return "API: indisponible";
+  }
+
   function getAccessToken() {
     return localStorage.getItem(ACCESS_KEY);
   }
@@ -177,11 +206,54 @@
     }
   }
 
-  function formatErrorMessage(responseBody, fallback) {
-    if (responseBody && responseBody.message) {
-      return responseBody.message;
+  function friendlyMessageByStatus(statusCode, backendMessage) {
+    if (backendMessage) {
+      return backendMessage;
     }
-    return fallback || "Une erreur est survenue";
+
+    if (statusCode === 400) {
+      return "Requete invalide. Verifiez les champs saisis.";
+    }
+    if (statusCode === 401) {
+      return "Authentification requise ou session expiree.";
+    }
+    if (statusCode === 403) {
+      return "Action non autorisee pour votre compte.";
+    }
+    if (statusCode === 404) {
+      return "Ressource introuvable.";
+    }
+    if (statusCode === 409) {
+      return "Conflit de donnees. Essayez de rafraichir la page.";
+    }
+    if (statusCode === 422) {
+      return "Certaines donnees sont invalides.";
+    }
+    if (statusCode === 429) {
+      return "Trop de tentatives. Patientez avant de reessayer.";
+    }
+    if (statusCode >= 500) {
+      return "Erreur serveur. Reessayez dans quelques instants.";
+    }
+
+    return "Erreur API";
+  }
+
+  function formatErrorMessage(responseBody, fallback, statusCode, requestId) {
+    const backendMessage = responseBody && responseBody.message ? responseBody.message : "";
+    const baseMessage = friendlyMessageByStatus(statusCode, backendMessage || fallback);
+    const statusSuffix = statusCode ? ` (HTTP ${statusCode})` : "";
+    const requestSuffix = requestId ? ` [Request-ID: ${requestId}]` : "";
+    return `${baseMessage}${statusSuffix}${requestSuffix}`;
+  }
+
+  async function safeFetch(url, options) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      setApiStatus("error", "API: hors ligne");
+      throw new Error("Impossible de joindre l'API. Vérifiez que le backend est démarré.");
+    }
   }
 
   async function refreshAccessToken() {
@@ -191,7 +263,7 @@
       return false;
     }
 
-    const response = await fetch(`${API_BASE}/auth/refresh`, {
+    const response = await safeFetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken })
@@ -231,13 +303,13 @@
       requestOptions.headers.Authorization = `Bearer ${token}`;
     }
 
-    let response = await fetch(`${API_BASE}${path}`, requestOptions);
+    let response = await safeFetch(`${API_BASE}${path}`, requestOptions);
 
     if (response.status === 401 && token) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         requestOptions.headers.Authorization = `Bearer ${getAccessToken()}`;
-        response = await fetch(`${API_BASE}${path}`, requestOptions);
+        response = await safeFetch(`${API_BASE}${path}`, requestOptions);
       }
     }
 
@@ -251,8 +323,15 @@
     });
 
     if (!response.ok) {
-      setApiStatus("error", "API: indisponible");
-      throw new Error(formatErrorMessage(data, "Erreur API"));
+      setApiStatus("error", bannerMessageByStatus(response.status));
+      throw new Error(
+        formatErrorMessage(
+          data,
+          "Erreur API",
+          response.status,
+          response.headers.get("x-request-id")
+        )
+      );
     }
 
     setApiStatus("ok", "API: connectée");

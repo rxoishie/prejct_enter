@@ -301,6 +301,34 @@
             border-color: var(--info);
         }
 
+        .password-input-wrap {
+            position: relative;
+        }
+
+        .password-input-wrap .form-control {
+            padding-right: 46px;
+        }
+
+        .password-toggle-btn {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--gray);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .password-toggle-btn:hover {
+            background: var(--light);
+            color: var(--primary);
+        }
+
         select.form-control {
             cursor: pointer;
             background: var(--white);
@@ -499,6 +527,111 @@
             display: flex;
             justify-content: flex-end;
             gap: 15px;
+        }
+
+        /* ===== PASSWORD MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(26, 37, 47, 0.55);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .password-modal {
+            width: 100%;
+            max-width: 460px;
+            background: var(--white);
+            border-radius: var(--border-radius-sm);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(12px);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .modal-overlay.show .password-modal {
+            transform: translateY(0);
+        }
+
+        .password-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--light);
+        }
+
+        .password-modal-header h3 {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .password-modal-body {
+            padding: 20px;
+        }
+
+        .password-modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--light);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-ghost {
+            background: var(--light);
+            color: var(--primary);
+        }
+
+        .btn-ghost:hover {
+            background: #dfe6e9;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .btn-icon:hover {
+            background: var(--light);
+            color: var(--primary);
+        }
+
+        .modal-hint {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 14px;
+        }
+
+        .form-error {
+            display: none;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--danger);
+            font-weight: 500;
+        }
+
+        .form-error.show {
+            display: block;
         }
 
         /* ===== ZONE CARD ===== */
@@ -844,11 +977,66 @@
                     <button id="saveProfileBtn" class="btn btn-primary" onclick="saveProfile()">
                         <i class="fas fa-save"></i> Mettre à jour
                     </button>
-                    <button class="btn btn-danger" onclick="changePassword()">
+                    <button id="changePasswordBtn" class="btn btn-danger" onclick="changePassword()">
                         <i class="fas fa-key"></i> Mot de passe
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="passwordModal" aria-hidden="true">
+        <div class="password-modal" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+            <div class="password-modal-header">
+                <h3 id="passwordModalTitle"><i class="fas fa-key"></i> Changer le mot de passe</h3>
+                <button type="button" class="btn-icon" id="passwordModalClose" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="passwordModalForm">
+                <div class="password-modal-body">
+                    <p class="modal-hint">Votre nouveau mot de passe doit contenir au moins 8 caracteres.</p>
+
+                    <div class="form-group">
+                        <label for="currentPasswordInput"><i class="fas fa-lock"></i> Mot de passe actuel</label>
+                        <div class="password-input-wrap">
+                            <input id="currentPasswordInput" type="password" class="form-control" autocomplete="current-password" required>
+                            <button type="button" class="password-toggle-btn" data-target="currentPasswordInput" aria-label="Afficher ou masquer le mot de passe">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newPasswordInput"><i class="fas fa-shield-alt"></i> Nouveau mot de passe</label>
+                        <div class="password-input-wrap">
+                            <input id="newPasswordInput" type="password" class="form-control" autocomplete="new-password" required>
+                            <button type="button" class="password-toggle-btn" data-target="newPasswordInput" aria-label="Afficher ou masquer le mot de passe">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPasswordInput"><i class="fas fa-check-circle"></i> Confirmer le mot de passe</label>
+                        <div class="password-input-wrap">
+                            <input id="confirmPasswordInput" type="password" class="form-control" autocomplete="new-password" required>
+                            <button type="button" class="password-toggle-btn" data-target="confirmPasswordInput" aria-label="Afficher ou masquer le mot de passe">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div id="passwordModalError" class="form-error"></div>
+                    </div>
+                </div>
+
+                <div class="password-modal-footer">
+                    <button type="button" class="btn btn-ghost" id="passwordModalCancel">Annuler</button>
+                    <button type="submit" id="passwordSubmitBtn" class="btn btn-danger">
+                        <i class="fas fa-save"></i> Mettre a jour
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -880,6 +1068,61 @@
 
         function updateValue(elementId, value) {
             document.getElementById(elementId).textContent = value + '%';
+        }
+
+        function openPasswordModal() {
+            const modal = document.getElementById('passwordModal');
+            clearPasswordModal();
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('currentPasswordInput').focus();
+        }
+
+        function closePasswordModal() {
+            const modal = document.getElementById('passwordModal');
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        function clearPasswordModal() {
+            document.getElementById('passwordModalForm').reset();
+            const errorEl = document.getElementById('passwordModalError');
+            errorEl.textContent = '';
+            errorEl.classList.remove('show');
+
+            ['currentPasswordInput', 'newPasswordInput', 'confirmPasswordInput'].forEach((id) => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.type = 'password';
+                }
+            });
+
+            document.querySelectorAll('.password-toggle-btn i').forEach((icon) => {
+                icon.className = 'fas fa-eye';
+            });
+        }
+
+        function setPasswordModalError(message) {
+            const errorEl = document.getElementById('passwordModalError');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function togglePasswordVisibility(event) {
+            const button = event.currentTarget;
+            const targetId = button.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = button.querySelector('i');
+
+            if (!input || !icon) {
+                return;
+            }
+
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            icon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
         }
 
         function applyUser(user) {
@@ -1036,8 +1279,60 @@
             }
         }
 
-        function changePassword() {
-            SmartIrriApi.notify('La rotation de mot de passe API arrive dans la prochaine étape backend.', 'info', 4200);
+        async function changePassword() {
+            openPasswordModal();
+        }
+
+        async function submitPasswordChange(event) {
+            event.preventDefault();
+
+            const submitButton = document.getElementById('passwordSubmitBtn');
+            const currentPassword = document.getElementById('currentPasswordInput').value;
+            const newPassword = document.getElementById('newPasswordInput').value;
+            const confirmPassword = document.getElementById('confirmPasswordInput').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                setPasswordModalError('Tous les champs mot de passe sont obligatoires.');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                setPasswordModalError('Le nouveau mot de passe doit contenir au moins 8 caracteres.');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                setPasswordModalError('La confirmation du mot de passe ne correspond pas.');
+                return;
+            }
+
+            if (newPassword === currentPassword) {
+                setPasswordModalError('Le nouveau mot de passe doit etre different de l\'ancien.');
+                return;
+            }
+
+            try {
+                setButtonLoading(submitButton, true, 'Mise a jour...');
+                await SmartIrriApi.apiRequest('/auth/change-password', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword
+                    })
+                });
+
+                closePasswordModal();
+                SmartIrriApi.notify('Mot de passe mis a jour. Veuillez vous reconnecter.', 'success', 2600);
+                setTimeout(() => {
+                    SmartIrriApi.logout().finally(() => {
+                        window.location.href = 'login.html';
+                    });
+                }, 900);
+            } catch (error) {
+                setPasswordModalError(error.message || 'Impossible de modifier le mot de passe.');
+            } finally {
+                setButtonLoading(submitButton, false);
+            }
         }
 
         function logout() {
@@ -1075,6 +1370,23 @@
             setTimeout(() => {
                 document.getElementById('loadingScreen').classList.add('fade-out');
             }, 800);
+
+            document.getElementById('passwordModalForm').addEventListener('submit', submitPasswordChange);
+            document.getElementById('passwordModalClose').addEventListener('click', closePasswordModal);
+            document.getElementById('passwordModalCancel').addEventListener('click', closePasswordModal);
+            document.querySelectorAll('.password-toggle-btn').forEach((button) => {
+                button.addEventListener('click', togglePasswordVisibility);
+            });
+            document.getElementById('passwordModal').addEventListener('click', (event) => {
+                if (event.target.id === 'passwordModal') {
+                    closePasswordModal();
+                }
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && document.getElementById('passwordModal').classList.contains('show')) {
+                    closePasswordModal();
+                }
+            });
         });
     </script>
 </body>

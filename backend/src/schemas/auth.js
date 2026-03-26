@@ -20,6 +20,11 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(1)
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(8).max(100),
+  newPassword: z.string().min(8).max(100)
+});
+
 const profileUpdateSchema = z.object({
   firstName: z.string().min(1).max(60).optional(),
   lastName: z.string().min(1).max(60).optional(),
@@ -32,5 +37,6 @@ module.exports = {
   registerSchema,
   loginSchema,
   refreshSchema,
+  changePasswordSchema,
   profileUpdateSchema
 };

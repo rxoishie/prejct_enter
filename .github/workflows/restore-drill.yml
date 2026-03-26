@@ -1,0 +1,64 @@
+name: Restore Drill
+
+on:
+  schedule:
+    - cron: "0 5 1 * *"
+  workflow_dispatch:
+
+jobs:
+  restore-drill:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      RTO_TARGET_MINUTES: 30
+      RESTORE_DRILL_ENFORCE_RTO: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Ensure drill script is executable
+        run: chmod +x scripts/restore-drill-report.sh scripts/db-backup.sh scripts/db-restore.sh
+
+      - name: Run restore drill report (dry run)
+        run: npm run drill:restore
+
+      - name: Publish restore drill summary
+        run: |
+          latest_json="$(ls -t restore-drills/*.json | head -n 1)"
+
+          node -e '
+            const fs = require("node:fs");
+            const file = process.argv[1];
+            const data = JSON.parse(fs.readFileSync(file, "utf8"));
+            const summary = [
+              "## Restore Drill Summary",
+              "",
+              `- Timestamp (UTC): ${data.timestampUtc}`,
+              `- Total duration: ${data.totalSeconds}s`,
+              `- Backup dry-run: ${data.backupDryRunSeconds}s`,
+              `- Restore dry-run: ${data.restoreDryRunSeconds}s`,
+              `- RTO target: ${data.rtoTargetMinutes} min (${data.rtoTargetSeconds}s)`,
+              `- RTO status: ${data.rtoStatus}`,
+              ""
+            ].join("\n");
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
+          ' "$latest_json"
+
+      - name: Upload restore drill report
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-drill-report
+          path: |
+            backend/restore-drills/*.md
+            backend/restore-drills/*.json

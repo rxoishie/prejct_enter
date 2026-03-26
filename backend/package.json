@@ -8,8 +8,13 @@
     "start": "node src/server.js",
     "migrate": "node src/db/migrate.js",
     "seed": "node src/db/seed.js",
+    "backup:db": "bash scripts/db-backup.sh",
+    "restore:db": "bash scripts/db-restore.sh",
+    "drill:restore": "bash scripts/restore-drill-report.sh",
     "smoke": "bash scripts/smoke.sh",
-    "test:api": "node --test tests/api.integration.test.mjs"
+    "test:api": "node --test tests/api.integration.test.mjs",
+    "test:rate-limit": "node --test tests/rate-limit.integration.test.mjs",
+    "test:local-ci": "bash scripts/test-local-ci.sh"
   },
   "engines": {
     "node": ">=18"

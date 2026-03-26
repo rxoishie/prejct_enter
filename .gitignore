@@ -5,5 +5,17 @@
 backend/node_modules/
 backend/.env
 
+# Node root
+node_modules/
+
+# Logs
+*.log
+backend-*.log
+frontend-*.log
+
+# Playwright outputs
+playwright-report/
+test-results/
+
 # macOS
 .DS_Store

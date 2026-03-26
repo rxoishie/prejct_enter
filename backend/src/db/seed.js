@@ -12,7 +12,10 @@ async function seed() {
      VALUES
       ('aishatou@example.com', 'Aishatou', $1, 'Aishatou', 'Diallo', '+221770000000', 'fr', 'all')
      ON CONFLICT (email)
-     DO UPDATE SET username = EXCLUDED.username
+       DO UPDATE SET
+        username = EXCLUDED.username,
+        failed_login_attempts = 0,
+        lockout_until = NULL
      RETURNING id, email, username`,
     [passwordHash]
   );

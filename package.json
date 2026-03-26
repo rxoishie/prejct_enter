@@ -1,0 +1,14 @@
+{
+  "name": "smartirri-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Frontend E2E smoke tests for SmartIrriPro",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:local": "bash scripts/test-frontend-e2e.sh",
+    "test:e2e:ci": "CI=true bash scripts/test-frontend-e2e.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.0"
+  }
+}
